@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DarkFlix - Movie Catalog</title>
+<style>
+:root{--bg:#101116;--card:#1c1d25;--red:#e50914;--muted:#aaa}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#fff;font-family:Arial,sans-serif}
+header{background:#191a20;padding:18px 5%;display:flex;
+justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+.logo{font-size:25px;font-weight:bold;color:var(--red)}
+nav a{color:white;text-decoration:none;margin-left:15px}
+.hero{padding:38px 5%;background:linear-gradient(120deg,#35151c,#101116)}
+.hero h1{font-size:clamp(28px,5vw,44px);margin:0 0 12px}
+.hero p{color:#ddd}
+.search{width:100%;max-width:520px;padding:14px;border:1px solid #444;
+border-radius:7px;background:#202129;color:white;font-size:16px}
+main{padding:25px 5%}
+.filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:25px}
+.filters button,.action{padding:10px 15px;border:0;border-radius:5px;
+background:#292a34;color:white;cursor:pointer}
+.filters button.active,.action{background:var(--red)}
+h2{font-size:22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:18px}
+.movie{background:var(--card);border-radius:8px;overflow:hidden}
+.poster{height:220px;display:flex;align-items:center;justify-content:center;
+text-align:center;padding:12px;font-size:22px;font-weight:bold;
+background:linear-gradient(145deg,#62252f,#242632 70%,#111)}
+.info{padding:12px}
+.info h3{font-size:15px;margin:0 0 8px}
+.meta{font-size:12px;color:var(--muted);margin-bottom:12px}
+.action{display:inline-block;text-decoration:none;font-size:13px}
+footer{padding:28px 5%;margin-top:30px;background:#191a20;color:#bbb;
+font-size:13px;line-height:1.7}
+dialog{width:min(520px,92%);background:#202129;color:white;
+border:1px solid #444;border-radius:10px;padding:24px}
+dialog::backdrop{background:#000c}
+.close{float:right;background:#444;color:white;border:0;padding:8px;cursor:pointer}
+@media(max-width:480px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.poster{height:190px}nav a{margin-left:8px;font-size:13px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">DARKFLIX</div>
+  <nav>
+    <a href="#home">Home</a>
+    <a href="#movies">Movies</a>
+    <a href="#about">About</a>
+  </nav>
+</header>
+
+<section class="hero" id="home">
+  <h1>Discover Your Next Movie</h1>
+  <p>Explore movies, genres, release years and official trailers.</p>
+  <input class="search" id="search" placeholder="Search movie titles..."
+  aria-label="Search movies">
+</section>
+
+<main id="movies">
+  <h2>Browse Categories</h2>
+  <div class="filters" id="filters"></div>
+  <h2>Movie Collection</h2>
+  <p id="count" style="color:#aaa"></p>
+  <div class="grid" id="grid"></div>
+</main>
+
+<dialog id="details">
+  <button class="close" id="close">Close ✕</button>
+  <div id="detailContent" style="clear:both;padding-top:15px"></div>
+</dialog>
+
+<footer id="about">
+  <strong>About DarkFlix</strong>
+  <p>A movie discovery catalog for movie lovers. This demo lists movie
+  information and links to official trailer searches. It does not host
+  or distribute copyrighted films.</p>
+  <p>Movie information and images must be used under the relevant
+  provider's terms and licenses.</p>
+</footer>
+
+<script>
+const movies = [
+ {title:"Inception",year:2010,genre:"Sci-Fi",rating:"8.8",
+  description:"A science-fiction thriller about dreams and reality."},
+ {title:"Interstellar",year:2014,genre:"Sci-Fi",rating:"8.7",
+  description:"An adventure across space in search of a future for humanity."},
+ {title:"The Dark Knight",year:2008,genre:"Action",rating:"9.0",
+  description:"A superhero crime drama set in Gotham City."},
+ {title:"The Batman",year:2022,genre:"Action",rating:"7.8",
+  description:"A detective story featuring Gotham's Dark Knight."},
+ {title:"Coco",year:2017,genre:"Animation",rating:"8.4",
+  description:"An animated adventure about music, family and memory."},
+ {title:"Toy Story",year:1995,genre:"Animation",rating:"8.3",
+  description:"An animated adventure about toys and friendship."},
+ {title:"The Conjuring",year:2013,genre:"Horror",rating:"7.5",
+  description:"A supernatural horror story inspired by paranormal investigations."},
+ {title:"A Quiet Place",year:2018,genre:"Horror",rating:"7.5",
+  description:"A family tries to survive in a world where sound is dangerous."},
+ {title:"The Intern",year:2015,genre:"Comedy",rating:"7.1",
+  description:"A comedy-drama about an older intern and a young entrepreneur."},
+ {title:"Forrest Gump",year:1994,genre:"Drama",rating:"8.8",
+  description:"A drama following one man's remarkable life journey."}
+];
+
+let category = "All";
+const grid = document.getElementById("grid");
+const search = document.getElementById("search");
+const filters = document.getElementById("filters");
+const dialog = document.getElementById("details");
+
+const categories = ["All", ...new Set(movies.map(m=>m.genre))];
+
+categories.forEach(name=>{
+  const b=document.createElement("button");
+  b.textContent=name;
+  b.className=name===category?"active":"";
+  b.onclick=()=>{
+    category=name;
+    [...filters.children].forEach(x=>x.classList.toggle("active",x===b));
+    render();
+  };
+  filters.appendChild(b);
+});
+
+function render(){
+  const q=search.value.trim().toLowerCase();
+  const list=movies.filter(m=>
+    (category==="All"||m.genre===category) &&
+    m.title.toLowerCase().includes(q)
+  );
+  document.getElementById("count").textContent=list.length+" movies found";
+  grid.replaceChildren();
+
+  list.forEach(m=>{
+    const card=document.createElement("article");
+    card.className="movie";
+
+    const poster=document.createElement("div");
+    poster.className="poster";
+    poster.textContent=m.title;
+
+    const info=document.createElement("div");
+    info.className="info";
+
+    const title=document.createElement("h3");
+    title.textContent=m.title;
+
+    const meta=document.createElement("div");
+    meta.className="meta";
+    meta.textContent=m.year+" • "+m.genre+" • ★ "+m.rating;
+
+    const btn=document.createElement("button");
+    btn.className="action";
+    btn.textContent="View Details";
+    btn.onclick=()=>showDetails(m);
+
+    info.append(title,meta,btn);
+    card.append(poster,info);
+    grid.appendChild(card);
+  });
+
+  if(!list.length) grid.textContent="No movies found. Try another title.";
+}
+
+function showDetails(m){
+  const box=document.getElementById("detailContent");
+  box.replaceChildren();
+
+  const h=document.createElement("h2");
+  h.textContent=m.title+" ("+m.year+")";
+
+  const meta=document.createElement("p");
+  meta.textContent=m.genre+" • Rating "+m.rating;
+
+  const p=document.createElement("p");
+  p.textContent=m.description;
+
+  const a=document.createElement("a");
+  a.className="action";
+  a.target="_blank";
+  a.rel="noopener noreferrer";
+  a.href="https://www.youtube.com/results?search_query="+
+    encodeURIComponent(m.title+" "+m.year+" official trailer");
+  a.textContent="Find Official Trailer";
+
+  box.append(h,meta,p,a);
+  dialog.showModal();
+}
+
+search.addEventListener("input",render);
+document.getElementById("close").onclick=()=>dialog.close();
+render();
+</script>
+</body>
+</html>
